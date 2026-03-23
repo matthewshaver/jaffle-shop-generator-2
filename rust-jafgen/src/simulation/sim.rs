@@ -106,7 +106,11 @@ pub fn run_simulation(config: &SimConfig) -> SimResult {
 }
 
 pub fn save_results(config: &SimConfig, result: &SimResult) -> Result<String, String> {
-    let output_dir = "jaffle-data";
+    let cwd = std::env::current_dir()
+        .map_err(|e| format!("Failed to get current directory: {}", e))?;
+    let output_dir = cwd.join("jaffle-data");
+    let output_dir = output_dir.to_string_lossy().to_string();
+    let output_dir = output_dir.as_str();
     fs::create_dir_all(output_dir).map_err(|e| format!("Failed to create output directory: {}", e))?;
 
     let prefix = &config.prefix;

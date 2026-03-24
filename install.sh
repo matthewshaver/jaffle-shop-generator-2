@@ -11,7 +11,7 @@ if ! command -v cargo &> /dev/null; then
 fi
 
 echo "Building and installing jafgen..."
-cargo install --path .
+cargo install --path . --locked
 
 echo ""
 echo "Done! Run 'jafgen' from any directory to start the generator."

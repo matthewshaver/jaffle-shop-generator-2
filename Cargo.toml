@@ -1,6 +1,6 @@
 [package]
 name = "jafgen"
-version = "0.5.0"
+version = "2.0.0"
 edition = "2021"
 description = "Jaffle Shop data generator - generates synthetic datasets for analytics engineering"
 

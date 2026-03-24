@@ -11,7 +11,7 @@ if ! command -v cargo &> /dev/null; then
 fi
 
 echo "Building and installing jafgen..."
-cargo install --path rust-jafgen
+cargo install --path .
 
 echo ""
 echo "Done! Run 'jafgen' from any directory to start the generator."

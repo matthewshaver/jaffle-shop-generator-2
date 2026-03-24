@@ -17,8 +17,8 @@ The generated data includes tables for:
 _Requires [Rust](https://www.rust-lang.org/tools/install). The install script will set it up for you if you don't have it._
 
 ```shell
-git clone https://github.com/dbt-labs/jaffle-shop-generator.git
-cd jaffle-shop-generator
+git clone https://github.com/matthewshaver/jaffle-shop-generator-2.git
+cd jaffle-shop-generator-2
 ./install.sh
 ```
 

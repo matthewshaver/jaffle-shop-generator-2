@@ -55,7 +55,7 @@ pub fn run_simulation(config: &SimConfig) -> SimResult {
         .stores
         .iter()
         .map(|store| {
-            let num_customers = store.tam / 100 * 100; // Scale TAM
+            let num_customers = store.tam;
             Market::new(store.clone(), num_customers, &mut rng)
         })
         .collect();
@@ -96,9 +96,14 @@ pub fn run_simulation(config: &SimConfig) -> SimResult {
         }
         all_orders.len()
     } else {
-        // No cap specified: target 10,000–15,000 orders with ~3 orders/customer/year
-        let target = rng.gen_range(10_000usize..=15_000usize);
-        let years = (total_days as f64 / 365.25).max(1.0);
+        // No cap specified: target 10,000–15,000 orders per effective store-year
+        // Account for stores that open partway through (or never) via their offset
+        let per_store_per_year = rng.gen_range(10_000usize..=15_000usize);
+        let effective_store_years: f64 = config.stores.iter().map(|s| {
+            let open_days = (total_days - s.opened_day).max(0) as f64;
+            open_days / 365.25
+        }).sum();
+        let target = (per_store_per_year as f64 * effective_store_years.max(1.0)).round() as usize;
 
         // Group orders by customer
         let mut orders_by_customer: HashMap<String, Vec<Order>> = HashMap::new();
@@ -110,12 +115,16 @@ pub fn run_simulation(config: &SimConfig) -> SimResult {
         }
 
         let available_customers = orders_by_customer.len();
-        // Ideal: 3 orders/customer/year → need target/(3*years) customers
-        let ideal_customers = ((target as f64) / (3.0 * years)).ceil() as usize;
-        // Use the smaller of ideal vs available
+        // Calculate how many orders per customer we need to hit the target.
+        // Prefer ~3 orders/customer/year, but flex up if the pool is too small.
+        let avg_years = (effective_store_years / (config.stores.len() as f64).max(1.0)).max(1.0);
+        let ideal_per_customer = 3.0 * avg_years;
+        let ideal_customers = ((target as f64) / ideal_per_customer).ceil() as usize;
+
+        // If we have enough customers, select ideal_customers.
+        // Otherwise, use all available and increase per-customer orders.
         let selected_count = ideal_customers.min(available_customers).max(1);
-        // Recalculate per-customer avg to hit target with selected_count customers
-        let avg_per_customer = ((target as f64) / (selected_count as f64)).round().max(1.0) as usize;
+        let avg_per_customer = ((target as f64) / (selected_count as f64)).ceil().max(1.0) as usize;
 
         // Shuffle customer IDs and pick selected_count of them
         let mut customer_ids: Vec<String> = orders_by_customer.keys().cloned().collect();
@@ -127,8 +136,9 @@ pub fn run_simulation(config: &SimConfig) -> SimResult {
         let mut kept_orders: Vec<Order> = Vec::with_capacity(target);
         for cid in &customer_ids {
             if let Some(mut orders) = orders_by_customer.remove(cid) {
-                let upper = (2 * avg_per_customer).min(orders.len()).max(1);
-                let keep = rng.gen_range(1..=upper);
+                let lower = (avg_per_customer / 2).max(1);
+                let upper = (2 * avg_per_customer).min(orders.len()).max(lower);
+                let keep = rng.gen_range(lower..=upper);
                 fisher_yates_shuffle(&mut orders, &mut rng);
                 orders.truncate(keep);
                 kept_orders.extend(orders);
@@ -144,6 +154,49 @@ pub fn run_simulation(config: &SimConfig) -> SimResult {
         // Sort chronologically for clean output
         kept_orders.sort_by_key(|o| o.ordered_at);
         all_orders = kept_orders;
+
+        // Split heavy-ordering customers into multiple unique customers
+        // so the dataset has a more realistic customer count (~5 orders/customer/year).
+        let max_orders_per_customer = (5.0 * avg_years).ceil() as usize;
+        if max_orders_per_customer > 0 {
+            // Group orders by customer
+            let mut orders_by_cust: HashMap<String, Vec<usize>> = HashMap::new();
+            for (i, order) in all_orders.iter().enumerate() {
+                orders_by_cust.entry(order.customer_id.clone()).or_default().push(i);
+            }
+
+            for (cid, indices) in &orders_by_cust {
+                if indices.len() <= max_orders_per_customer {
+                    continue;
+                }
+                // Split this customer's orders across multiple new customers
+                let num_splits = (indices.len() + max_orders_per_customer - 1) / max_orders_per_customer;
+                if num_splits <= 1 {
+                    continue;
+                }
+                // Create new customers based on the original
+                let original = all_customers.get(cid).cloned();
+                if original.is_none() {
+                    continue;
+                }
+                let orig = original.unwrap();
+
+                // First chunk keeps the original ID; subsequent chunks get new IDs
+                for (chunk_idx, chunk) in indices.chunks(max_orders_per_customer).enumerate() {
+                    if chunk_idx == 0 {
+                        continue; // keep original
+                    }
+                    let new_customer = Customer::new(orig.persona, &orig.store_id, &mut rng);
+                    let new_id = new_customer.id.clone();
+                    all_customers.insert(new_id.clone(), new_customer);
+
+                    // Reassign orders to the new customer
+                    for &order_idx in chunk {
+                        all_orders[order_idx].customer_id = new_id.clone();
+                    }
+                }
+            }
+        }
 
         // Rebuild customer and tweet sets to match surviving orders
         let active_ids: std::collections::HashSet<String> =

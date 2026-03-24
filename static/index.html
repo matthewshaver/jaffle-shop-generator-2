@@ -266,6 +266,53 @@
             to { transform: rotate(360deg); }
         }
 
+        .progress-container {
+            display: none;
+            max-width: 480px;
+            margin: 1rem auto 0;
+        }
+
+        .progress-container.visible {
+            display: block;
+        }
+
+        .progress-bar-track {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            height: 28px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), #fbbf24, var(--accent));
+            background-size: 200% 100%;
+            border-radius: 12px;
+            transition: width 0.4s ease;
+            animation: shimmer 2s linear infinite;
+            width: 0%;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .progress-status {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+            text-align: center;
+            min-height: 1.3em;
+        }
+
+        .progress-emoji {
+            font-size: 1rem;
+            margin-right: 0.35rem;
+        }
+
         .country-list {
             display: flex;
             flex-wrap: wrap;
@@ -333,6 +380,12 @@
             <button class="btn btn-primary" id="generate-btn" onclick="generate()">
                 Generate Data
             </button>
+            <div class="progress-container" id="progress-container">
+                <div class="progress-bar-track">
+                    <div class="progress-bar-fill" id="progress-fill"></div>
+                </div>
+                <div class="progress-status" id="progress-status"></div>
+            </div>
             <div class="error-msg" id="error-msg"></div>
         </div>
 
@@ -460,6 +513,82 @@
             }
         }
 
+        const PROGRESS_MESSAGES = [
+            { pct: 0,  emoji: "🥪", text: "Warming up the jaffle irons..." },
+            { pct: 5,  emoji: "👨‍🍳", text: "Hiring line cooks with questionable references..." },
+            { pct: 10, emoji: "📋", text: "Forging health inspection certificates..." },
+            { pct: 15, emoji: "🏪", text: "Scouting locations near unsuspecting neighborhoods..." },
+            { pct: 20, emoji: "🧈", text: "Butter procurement in progress..." },
+            { pct: 28, emoji: "👥", text: "Generating customers with poor dietary choices..." },
+            { pct: 35, emoji: "☕", text: "Brewing extremely overpriced coffee..." },
+            { pct: 42, emoji: "🧀", text: "Aging artisanal cheese (speed run)..." },
+            { pct: 48, emoji: "📊", text: "Simulating regrettable lunch decisions..." },
+            { pct: 55, emoji: "🐦", text: "Ghostwriting tweets for fictional foodies..." },
+            { pct: 62, emoji: "💰", text: "Calculating tax (the painful part)..." },
+            { pct: 68, emoji: "📈", text: "Fabricating year-over-year growth metrics..." },
+            { pct: 75, emoji: "🍞", text: "Toasting bread to golden perfection..." },
+            { pct: 82, emoji: "🏃", text: "Chasing down the last few orders..." },
+            { pct: 88, emoji: "📝", text: "Writing CSVs with love and semicolons... wait, commas..." },
+            { pct: 93, emoji: "🔍", text: "Quality checking every single jaffle..." },
+            { pct: 97, emoji: "✨", text: "Adding final sprinkle of data magic..." },
+        ];
+
+        let progressInterval = null;
+
+        function startProgressBar() {
+            const container = document.getElementById('progress-container');
+            const fill = document.getElementById('progress-fill');
+            const status = document.getElementById('progress-status');
+            container.classList.add('visible');
+            fill.style.width = '0%';
+
+            let msgIndex = 0;
+            let currentPct = 0;
+
+            function updateProgress() {
+                if (msgIndex < PROGRESS_MESSAGES.length) {
+                    const msg = PROGRESS_MESSAGES[msgIndex];
+                    const targetPct = msg.pct;
+                    currentPct += (targetPct - currentPct) * 0.3 + 0.5;
+                    currentPct = Math.min(currentPct, 97);
+                    fill.style.width = currentPct + '%';
+                    status.innerHTML = `<span class="progress-emoji">${msg.emoji}</span>${msg.text}`;
+                    msgIndex++;
+                } else {
+                    // Loop the last few messages with slow crawl
+                    currentPct = Math.min(currentPct + 0.2, 98);
+                    fill.style.width = currentPct + '%';
+                    const loopMsgs = PROGRESS_MESSAGES.slice(-3);
+                    const pick = loopMsgs[Math.floor(Math.random() * loopMsgs.length)];
+                    status.innerHTML = `<span class="progress-emoji">${pick.emoji}</span>${pick.text}`;
+                }
+            }
+
+            updateProgress();
+            progressInterval = setInterval(updateProgress, 1200);
+        }
+
+        function stopProgressBar(success) {
+            clearInterval(progressInterval);
+            progressInterval = null;
+            const fill = document.getElementById('progress-fill');
+            const status = document.getElementById('progress-status');
+
+            if (success) {
+                fill.style.width = '100%';
+                status.innerHTML = '<span class="progress-emoji">🎉</span>Jaffles served! Bon appetit!';
+                setTimeout(() => {
+                    document.getElementById('progress-container').classList.remove('visible');
+                }, 3000);
+            } else {
+                fill.style.width = '0%';
+                status.innerHTML = '<span class="progress-emoji">😵</span>The jaffles burned...';
+                setTimeout(() => {
+                    document.getElementById('progress-container').classList.remove('visible');
+                }, 3000);
+            }
+        }
+
         async function generate() {
             const btn = document.getElementById('generate-btn');
             const errorEl = document.getElementById('error-msg');
@@ -492,6 +621,7 @@
 
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner"></span>Generating...';
+            startProgressBar();
 
             try {
                 const resp = await fetch('/api/generate', {
@@ -503,6 +633,7 @@
                 const data = await resp.json();
 
                 if (data.success && data.stats) {
+                    stopProgressBar(true);
                     document.getElementById('stat-grid').innerHTML = `
                         <div class="stat"><div class="value">${data.stats.total_orders.toLocaleString()}</div><div class="label">Orders</div></div>
                         <div class="stat"><div class="value">${data.stats.total_customers.toLocaleString()}</div><div class="label">Customers</div></div>
@@ -512,9 +643,11 @@
                     document.getElementById('output-path').textContent = data.stats.output_path;
                     resultsEl.classList.add('visible');
                 } else {
+                    stopProgressBar(false);
                     errorEl.textContent = data.message || 'Generation failed.';
                 }
             } catch (e) {
+                stopProgressBar(false);
                 errorEl.textContent = 'Request failed: ' + e.message;
             } finally {
                 btn.disabled = false;

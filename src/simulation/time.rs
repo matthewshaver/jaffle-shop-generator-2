@@ -100,8 +100,9 @@ impl Day {
     fn growth_effect(&self) -> f64 {
         let year = self.year();
         let month = self.month();
-        let x = ((year - 2016) * 12 + month as i32) as f64;
-        1.0 + (x / 12.0) * 0.2
+        let years_from_base = ((year - 2016) * 12 + month as i32) as f64 / 12.0;
+        // Compound 5% year-over-year growth, capped at 2x baseline
+        (1.05_f64.powf(years_from_base)).min(2.0)
     }
 }
 

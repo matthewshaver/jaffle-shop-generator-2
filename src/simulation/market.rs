@@ -31,6 +31,13 @@ impl Market {
             }
         }
 
+        // Shuffle customers so that the take(active_count) approach
+        // doesn't always favour the same personas in order.
+        for i in (1..customers.len()).rev() {
+            let j = rng.gen_range(0..=i);
+            customers.swap(i, j);
+        }
+
         Market {
             store,
             customers,

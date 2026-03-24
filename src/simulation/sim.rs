@@ -198,11 +198,19 @@ pub fn run_simulation(config: &SimConfig) -> SimResult {
             }
         }
 
-        // Rebuild customer and tweet sets to match surviving orders
+        // Rebuild customer set to match surviving orders
         let active_ids: std::collections::HashSet<String> =
             all_orders.iter().map(|o| o.customer_id.clone()).collect();
         all_customers.retain(|k, _| active_ids.contains(k));
+
+        // Thin tweets to ~10% of final order count so they're a small complement
         all_tweets.retain(|t| active_ids.contains(&t.user_id));
+        let tweet_target = (all_orders.len() as f64 * 0.10).round() as usize;
+        if all_tweets.len() > tweet_target {
+            fisher_yates_shuffle(&mut all_tweets, &mut rng);
+            all_tweets.truncate(tweet_target);
+            all_tweets.sort_by_key(|t| t.tweeted_at);
+        }
 
         all_orders.len()
     };

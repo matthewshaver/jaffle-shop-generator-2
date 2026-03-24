@@ -108,6 +108,12 @@
             border-color: var(--accent);
         }
 
+        /* Lighten the date picker calendar icons */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(0.8) brightness(1.4);
+            cursor: pointer;
+        }
+
         .btn {
             padding: 0.6rem 1.25rem;
             border: none;
@@ -351,7 +357,7 @@
                 </div>
                 <div class="form-group">
                     <label for="end-date">End Date</label>
-                    <input type="date" id="end-date" value="2024-09-01">
+                    <input type="date" id="end-date">
                 </div>
                 <div class="form-group">
                     <label for="num-orders">Max Orders (optional)</label>
@@ -397,20 +403,34 @@
     </div>
 
     <script>
-        const COUNTRIES = [
-            "US", "CA", "GB", "AU", "DE", "FR", "JP", "BR", "MX", "IN",
-            "IT", "ES", "NL", "SE", "NO", "DK", "FI", "IE", "NZ", "SG",
-            "KR", "ZA", "AR", "CL", "CO", "PE", "AT", "CH", "BE", "PT",
-            "PL", "CZ", "HU", "RO", "GR", "TR", "IL", "AE", "SA", "NG",
-            "KE", "EG", "MA", "GH", "TH", "VN", "PH", "MY", "ID", "TW"
-        ];
+        const COUNTRIES = {
+            "AR": "Argentina", "AU": "Australia", "AT": "Austria", "BE": "Belgium",
+            "BR": "Brazil", "CA": "Canada", "CL": "Chile", "CO": "Colombia",
+            "CZ": "Czech Republic", "DK": "Denmark", "EG": "Egypt", "FI": "Finland",
+            "FR": "France", "DE": "Germany", "GH": "Ghana", "GR": "Greece",
+            "HU": "Hungary", "IN": "India", "ID": "Indonesia", "IE": "Ireland",
+            "IL": "Israel", "IT": "Italy", "JP": "Japan", "KE": "Kenya",
+            "MY": "Malaysia", "MA": "Morocco", "MX": "Mexico", "NL": "Netherlands",
+            "NZ": "New Zealand", "NG": "Nigeria", "NO": "Norway", "PE": "Peru",
+            "PH": "Philippines", "PL": "Poland", "PT": "Portugal", "RO": "Romania",
+            "SA": "Saudi Arabia", "SG": "Singapore", "ZA": "South Africa", "KR": "South Korea",
+            "ES": "Spain", "SE": "Sweden", "CH": "Switzerland", "TW": "Taiwan",
+            "TH": "Thailand", "TR": "Turkey", "AE": "United Arab Emirates",
+            "GB": "United Kingdom", "US": "United States", "VN": "Vietnam"
+        };
+
+        // Default end date to today
+        (function() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('end-date').value = today;
+        })();
 
         let stores = [];
         let storeCounter = 0;
 
         function createStoreElement(store, index) {
-            const countryOptions = COUNTRIES.map(c =>
-                `<option value="${c}" ${c === store.country ? 'selected' : ''}>${c}</option>`
+            const countryOptions = Object.entries(COUNTRIES).map(([code, name]) =>
+                `<option value="${code}" ${code === store.country ? 'selected' : ''}>${name}</option>`
             ).join('');
 
             return `
@@ -506,7 +526,10 @@
                 const data = await resp.json();
                 stores = data.stores;
                 document.getElementById('start-date').value = data.start_date;
-                document.getElementById('end-date').value = data.end_date;
+                // Keep end date as today (set on page load) unless user hasn't got one
+                if (!document.getElementById('end-date').value) {
+                    document.getElementById('end-date').value = data.end_date;
+                }
                 renderStores();
             } catch (e) {
                 console.error('Failed to load defaults:', e);

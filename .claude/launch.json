@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "jafgen-rust",
+      "runtimeExecutable": "/Users/mshaver/.cargo/bin/cargo",
+      "runtimeArgs": ["run", "--release"],
+      "port": 3000
+    }
+  ]
+}

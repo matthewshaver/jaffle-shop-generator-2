@@ -1,0 +1,18 @@
+[package]
+name = "jafgen"
+version = "2.0.0"
+edition = "2021"
+description = "Jaffle Shop data generator - generates synthetic datasets for analytics engineering"
+
+[dependencies]
+axum = { version = "0.7", features = ["macros"] }
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", features = ["serde"] }
+rand = "0.8"
+uuid = { version = "1", features = ["v4"] }
+csv = "1"
+tower-http = { version = "0.5", features = ["fs", "cors"] }
+tower = "0.4"
+open = "5"

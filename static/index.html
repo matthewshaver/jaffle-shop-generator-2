@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jaffle Shop Generator</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --surface-hover: #334155;
+            --border: #475569;
+            --text: #f1f5f9;
+            --text-muted: #94a3b8;
+            --accent: #f59e0b;
+            --accent-hover: #d97706;
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --success: #22c55e;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 0.25rem;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card h2 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--accent);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .form-row.three {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 0.35rem;
+            font-weight: 500;
+        }
+
+        .form-group input, .form-group select {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.6rem 0.75rem;
+            color: var(--text);
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            border-color: var(--accent);
+        }
+
+        /* Lighten the date picker calendar icons */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(0.8) brightness(1.4);
+            cursor: pointer;
+        }
+
+        .btn {
+            padding: 0.6rem 1.25rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: var(--bg);
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: var(--surface-hover);
+            color: var(--text);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+
+        .btn-danger {
+            background: transparent;
+            color: var(--danger);
+            border: 1px solid var(--danger);
+            padding: 0.4rem 0.75rem;
+            font-size: 0.8rem;
+        }
+
+        .btn-danger:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        .store-item {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            position: relative;
+        }
+
+        .store-item .store-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .store-item .store-header h3 {
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+
+        .store-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .store-grid .form-group input,
+        .store-grid .form-group select {
+            font-size: 0.85rem;
+            padding: 0.5rem 0.6rem;
+        }
+
+        .store-grid .form-group label {
+            font-size: 0.78rem;
+        }
+
+        .actions {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            margin-top: 0.5rem;
+        }
+
+        #generate-btn {
+            font-size: 1rem;
+            padding: 0.75rem 2rem;
+        }
+
+        .results {
+            display: none;
+        }
+
+        .results.visible {
+            display: block;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 1rem;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat .value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .stat .label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 0.2rem;
+        }
+
+        .output-path {
+            margin-top: 1rem;
+            padding: 0.75rem 1rem;
+            background: var(--bg);
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: var(--success);
+            word-break: break-all;
+        }
+
+        .error-msg {
+            color: var(--danger);
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--bg);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            vertical-align: middle;
+            margin-right: 0.5rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .progress-container {
+            display: none;
+            max-width: 480px;
+            margin: 1rem auto 0;
+        }
+
+        .progress-container.visible {
+            display: block;
+        }
+
+        .progress-bar-track {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            height: 28px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), #fbbf24, var(--accent));
+            background-size: 200% 100%;
+            border-radius: 12px;
+            transition: width 0.4s ease;
+            animation: shimmer 2s linear infinite;
+            width: 0%;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .progress-status {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+            text-align: center;
+            min-height: 1.3em;
+        }
+
+        .progress-emoji {
+            font-size: 1rem;
+            margin-right: 0.35rem;
+        }
+
+        .country-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+            margin-top: 0.5rem;
+        }
+
+        .country-badge {
+            background: var(--surface-hover);
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        @media (max-width: 640px) {
+            .form-row { grid-template-columns: 1fr; }
+            .form-row.three { grid-template-columns: 1fr; }
+            .store-grid { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Jaffle Shop Generator</h1>
+            <p>Generate synthetic datasets for analytics engineering</p>
+        </header>
+
+        <div class="card">
+            <h2>Date Range &amp; Orders</h2>
+            <div class="form-row three">
+                <div class="form-group">
+                    <label for="start-date">Start Date</label>
+                    <input type="date" id="start-date" value="2023-09-01">
+                </div>
+                <div class="form-group">
+                    <label for="end-date">End Date</label>
+                    <input type="date" id="end-date">
+                </div>
+                <div class="form-group">
+                    <label for="num-orders">Max Orders (optional)</label>
+                    <input type="number" id="num-orders" placeholder="Unlimited" min="1">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="prefix">File Prefix</label>
+                    <input type="text" id="prefix" value="raw" placeholder="raw">
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Store Locations</h2>
+            <div id="stores-list"></div>
+            <div class="actions">
+                <button class="btn btn-secondary" onclick="addStore()">+ Add Store</button>
+                <button class="btn btn-secondary" onclick="loadDefaults()">Reset to Defaults</button>
+            </div>
+            <div class="country-list" id="country-summary"></div>
+        </div>
+
+        <div style="text-align: center; margin: 2rem 0;">
+            <button class="btn btn-primary" id="generate-btn" onclick="generate()">
+                Generate Data
+            </button>
+            <div class="progress-container" id="progress-container">
+                <div class="progress-bar-track">
+                    <div class="progress-bar-fill" id="progress-fill"></div>
+                </div>
+                <div class="progress-status" id="progress-status"></div>
+            </div>
+            <div class="error-msg" id="error-msg"></div>
+        </div>
+
+        <div class="card results" id="results">
+            <h2>Generation Results</h2>
+            <div class="stat-grid" id="stat-grid"></div>
+            <div class="output-path" id="output-path"></div>
+        </div>
+    </div>
+
+    <script>
+        const COUNTRIES = {
+            "AR": "Argentina", "AU": "Australia", "AT": "Austria", "BE": "Belgium",
+            "BR": "Brazil", "CA": "Canada", "CL": "Chile", "CO": "Colombia",
+            "CZ": "Czech Republic", "DK": "Denmark", "EG": "Egypt", "FI": "Finland",
+            "FR": "France", "DE": "Germany", "GH": "Ghana", "GR": "Greece",
+            "HU": "Hungary", "IN": "India", "ID": "Indonesia", "IE": "Ireland",
+            "IL": "Israel", "IT": "Italy", "JP": "Japan", "KE": "Kenya",
+            "MY": "Malaysia", "MA": "Morocco", "MX": "Mexico", "NL": "Netherlands",
+            "NZ": "New Zealand", "NG": "Nigeria", "NO": "Norway", "PE": "Peru",
+            "PH": "Philippines", "PL": "Poland", "PT": "Portugal", "RO": "Romania",
+            "SA": "Saudi Arabia", "SG": "Singapore", "ZA": "South Africa", "KR": "South Korea",
+            "ES": "Spain", "SE": "Sweden", "CH": "Switzerland", "TW": "Taiwan",
+            "TH": "Thailand", "TR": "Turkey", "AE": "United Arab Emirates",
+            "GB": "United Kingdom", "US": "United States", "VN": "Vietnam"
+        };
+
+        // Default end date to today
+        (function() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('end-date').value = today;
+        })();
+
+        let stores = [];
+        let storeCounter = 0;
+
+        function createStoreElement(store, index) {
+            const countryOptions = Object.entries(COUNTRIES).map(([code, name]) =>
+                `<option value="${code}" ${code === store.country ? 'selected' : ''}>${name}</option>`
+            ).join('');
+
+            return `
+                <div class="store-item" id="store-${index}">
+                    <div class="store-header">
+                        <h3>${store.name || 'New Store'}</h3>
+                        <button class="btn btn-danger" onclick="removeStore(${index})">Remove</button>
+                    </div>
+                    <div class="store-grid">
+                        <div class="form-group">
+                            <label>Store Name</label>
+                            <input type="text" value="${store.name}" onchange="updateStore(${index}, 'name', this.value); updateStoreTitle(${index}, this.value)">
+                        </div>
+                        <div class="form-group">
+                            <label>City</label>
+                            <input type="text" value="${store.city}" onchange="updateStore(${index}, 'city', this.value)">
+                        </div>
+                        <div class="form-group">
+                            <label>Country</label>
+                            <select onchange="updateStore(${index}, 'country', this.value); updateCountrySummary()">
+                                ${countryOptions}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Popularity (0-1)</label>
+                            <input type="number" step="0.01" min="0" max="1" value="${store.base_popularity}" onchange="updateStore(${index}, 'base_popularity', parseFloat(this.value))">
+                        </div>
+                        <div class="form-group">
+                            <label>Open Day Offset</label>
+                            <input type="number" min="0" value="${store.opened_offset_days}" onchange="updateStore(${index}, 'opened_offset_days', parseInt(this.value))">
+                        </div>
+                        <div class="form-group">
+                            <label>Tax Rate</label>
+                            <input type="number" step="0.001" min="0" max="1" value="${store.tax_rate}" onchange="updateStore(${index}, 'tax_rate', parseFloat(this.value))">
+                        </div>
+                        <div class="form-group">
+                            <label>Market Size (TAM)</label>
+                            <input type="number" min="100" step="100" value="${store.tam}" onchange="updateStore(${index}, 'tam', parseInt(this.value))">
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderStores() {
+            const list = document.getElementById('stores-list');
+            list.innerHTML = stores.map((s, i) => createStoreElement(s, i)).join('');
+            updateCountrySummary();
+        }
+
+        function updateStore(index, field, value) {
+            stores[index][field] = value;
+        }
+
+        function updateStoreTitle(index, name) {
+            const header = document.querySelector(`#store-${index} h3`);
+            if (header) header.textContent = name || 'New Store';
+        }
+
+        function addStore() {
+            stores.push({
+                name: "New Store",
+                city: "City",
+                country: "US",
+                base_popularity: 0.85,
+                opened_offset_days: 0,
+                tax_rate: 0.06,
+                tam: 800,
+            });
+            renderStores();
+        }
+
+        function removeStore(index) {
+            stores.splice(index, 1);
+            renderStores();
+        }
+
+        function updateCountrySummary() {
+            const countries = [...new Set(stores.map(s => s.country))];
+            const el = document.getElementById('country-summary');
+            if (countries.length > 1) {
+                el.innerHTML = '<span style="font-size:0.8rem;color:var(--text-muted);">Countries:</span> ' +
+                    countries.map(c => `<span class="country-badge">${c}</span>`).join('');
+                el.innerHTML += '<br><span style="font-size:0.75rem;color:var(--accent);margin-top:0.35rem;display:inline-block;">Store files will include country abbreviation suffixes</span>';
+            } else {
+                el.innerHTML = '';
+            }
+        }
+
+        async function loadDefaults() {
+            try {
+                const resp = await fetch('/api/defaults');
+                const data = await resp.json();
+                stores = data.stores;
+                document.getElementById('start-date').value = data.start_date;
+                // Keep end date as today (set on page load) unless user hasn't got one
+                if (!document.getElementById('end-date').value) {
+                    document.getElementById('end-date').value = data.end_date;
+                }
+                renderStores();
+            } catch (e) {
+                console.error('Failed to load defaults:', e);
+            }
+        }
+
+        const PROGRESS_MESSAGES = [
+            { pct: 0,  emoji: "🥪", text: "Warming up the jaffle irons..." },
+            { pct: 5,  emoji: "👨‍🍳", text: "Hiring line cooks with questionable references..." },
+            { pct: 10, emoji: "📋", text: "Forging health inspection certificates..." },
+            { pct: 15, emoji: "🏪", text: "Scouting locations near unsuspecting neighborhoods..." },
+            { pct: 20, emoji: "🧈", text: "Butter procurement in progress..." },
+            { pct: 28, emoji: "👥", text: "Generating customers with poor dietary choices..." },
+            { pct: 35, emoji: "☕", text: "Brewing extremely overpriced coffee..." },
+            { pct: 42, emoji: "🧀", text: "Aging artisanal cheese (speed run)..." },
+            { pct: 48, emoji: "📊", text: "Simulating regrettable lunch decisions..." },
+            { pct: 55, emoji: "🐦", text: "Ghostwriting tweets for fictional foodies..." },
+            { pct: 62, emoji: "💰", text: "Calculating tax (the painful part)..." },
+            { pct: 68, emoji: "📈", text: "Fabricating year-over-year growth metrics..." },
+            { pct: 75, emoji: "🍞", text: "Toasting bread to golden perfection..." },
+            { pct: 82, emoji: "🏃", text: "Chasing down the last few orders..." },
+            { pct: 88, emoji: "📝", text: "Writing CSVs with love and semicolons... wait, commas..." },
+            { pct: 93, emoji: "🔍", text: "Quality checking every single jaffle..." },
+            { pct: 97, emoji: "✨", text: "Adding final sprinkle of data magic..." },
+        ];
+
+        let progressInterval = null;
+
+        function startProgressBar() {
+            const container = document.getElementById('progress-container');
+            const fill = document.getElementById('progress-fill');
+            const status = document.getElementById('progress-status');
+            container.classList.add('visible');
+            fill.style.width = '0%';
+
+            let msgIndex = 0;
+            let currentPct = 0;
+
+            function updateProgress() {
+                if (msgIndex < PROGRESS_MESSAGES.length) {
+                    const msg = PROGRESS_MESSAGES[msgIndex];
+                    const targetPct = msg.pct;
+                    currentPct += (targetPct - currentPct) * 0.3 + 0.5;
+                    currentPct = Math.min(currentPct, 97);
+                    fill.style.width = currentPct + '%';
+                    status.innerHTML = `<span class="progress-emoji">${msg.emoji}</span>${msg.text}`;
+                    msgIndex++;
+                } else {
+                    // Loop the last few messages with slow crawl
+                    currentPct = Math.min(currentPct + 0.2, 98);
+                    fill.style.width = currentPct + '%';
+                    const loopMsgs = PROGRESS_MESSAGES.slice(-3);
+                    const pick = loopMsgs[Math.floor(Math.random() * loopMsgs.length)];
+                    status.innerHTML = `<span class="progress-emoji">${pick.emoji}</span>${pick.text}`;
+                }
+            }
+
+            updateProgress();
+            progressInterval = setInterval(updateProgress, 1200);
+        }
+
+        function stopProgressBar(success) {
+            clearInterval(progressInterval);
+            progressInterval = null;
+            const fill = document.getElementById('progress-fill');
+            const status = document.getElementById('progress-status');
+
+            if (success) {
+                fill.style.width = '100%';
+                status.innerHTML = '<span class="progress-emoji">🎉</span>Jaffles served! Bon appetit!';
+                setTimeout(() => {
+                    document.getElementById('progress-container').classList.remove('visible');
+                }, 3000);
+            } else {
+                fill.style.width = '0%';
+                status.innerHTML = '<span class="progress-emoji">😵</span>The jaffles burned...';
+                setTimeout(() => {
+                    document.getElementById('progress-container').classList.remove('visible');
+                }, 3000);
+            }
+        }
+
+        async function generate() {
+            const btn = document.getElementById('generate-btn');
+            const errorEl = document.getElementById('error-msg');
+            const resultsEl = document.getElementById('results');
+            errorEl.textContent = '';
+            resultsEl.classList.remove('visible');
+
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+            const numOrdersVal = document.getElementById('num-orders').value;
+            const prefix = document.getElementById('prefix').value || 'raw';
+
+            if (!startDate || !endDate) {
+                errorEl.textContent = 'Please set both start and end dates.';
+                return;
+            }
+
+            if (stores.length === 0) {
+                errorEl.textContent = 'Please add at least one store.';
+                return;
+            }
+
+            const payload = {
+                start_date: startDate,
+                end_date: endDate,
+                num_orders: numOrdersVal ? parseInt(numOrdersVal) : null,
+                stores: stores,
+                prefix: prefix,
+            };
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>Generating...';
+            startProgressBar();
+
+            try {
+                const resp = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+
+                const data = await resp.json();
+
+                if (data.success && data.stats) {
+                    stopProgressBar(true);
+                    document.getElementById('stat-grid').innerHTML = `
+                        <div class="stat"><div class="value">${data.stats.total_orders.toLocaleString()}</div><div class="label">Orders</div></div>
+                        <div class="stat"><div class="value">${data.stats.total_customers.toLocaleString()}</div><div class="label">Customers</div></div>
+                        <div class="stat"><div class="value">${data.stats.total_tweets.toLocaleString()}</div><div class="label">Tweets</div></div>
+                        <div class="stat"><div class="value">${data.stats.total_days.toLocaleString()}</div><div class="label">Days Simulated</div></div>
+                    `;
+                    document.getElementById('output-path').textContent = data.stats.output_path;
+                    resultsEl.classList.add('visible');
+                } else {
+                    stopProgressBar(false);
+                    errorEl.textContent = data.message || 'Generation failed.';
+                }
+            } catch (e) {
+                stopProgressBar(false);
+                errorEl.textContent = 'Request failed: ' + e.message;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Generate Data';
+            }
+        }
+
+        // Load defaults on page load
+        loadDefaults();
+    </script>
+</body>
+</html>

@@ -1,86 +1,125 @@
 # 🥪 Jaffle Shop Generator 🏭
 
-> [!NOTE]
-> This is not an official dbt Labs project. It is maintained on a volunteer basis by dbt Labs employees who are passionate about analytics engineering, the dbt Community, and jaffles, and feel that generating datasets for learning and practicing is important. Please understand it's a work in progress and not supported in the same way as dbt itself.
+The Jaffle Shop Generator (`jafgen`) is a data generator that creates synthetic datasets suitable for analytics engineering practice or demonstrations. It provides a **web UI** at `localhost:3000` where you can configure and generate data in CSV format, designed to be used with a relational database.
 
-The Jaffle Shop Generator or `jafgen` is a simple command line tool for generating synthetic datasets suitable for analytics engineering practice or demonstrations. The data is generated in CSV format and is designed to be used with a relational database. It follows a simple schema, with tables for:
+The generated data includes tables for:
 
-- Customers (who place Orders)
-- Orders (from those Customers)
-- Products (the food and beverages the Orders contain)
-- Order Items (of those Products)
-- Supplies (needed for making those Products)
-- Stores (where the Orders are placed and fulfilled)
-- Tweets (Customers sometimes issue Tweets after placing an Order)
-
-It uses some straightforward math to create seasonality and trends in the data, for instance weekends being less busy than weekdays, customers having certain preferences, and new store locations opening over time. We plan to add more data types and complexity as the codebase evolves.
+- **Customers** (who place Orders)
+- **Orders** (from those Customers)
+- **Products** (the food and beverages the Orders contain)
+- **Order Items** (of those Products)
+- **Supplies** (needed for making those Products)
+- **Stores** (where the Orders are placed and fulfilled)
+- **Tweets** (Customers sometimes issue Tweets after placing an Order)
 
 ## Installation
 
-_Requires Python 3.10 or higher_.
-
-If you have [pipx](https://pypa.github.io/pipx/installation/) installed, `jafgen` is an ideal tool to use via pipx. You can generate data without installing anything in the local workspace using the following:
+_Requires [Rust](https://www.rust-lang.org/tools/install). The install script will set it up for you if you don't have it._
 
 ```shell
-pipx run jafgen [options]
+git clone https://github.com/dbt-labs/jaffle-shop-generator.git
+cd jaffle-shop-generator
+./install.sh
 ```
 
-You can also install `jafgen` into your project or workspace, ideally in a virtual environment.
+This builds and installs the `jafgen` binary to `~/.cargo/bin/`. If this is your first time installing Rust, restart your terminal (or run `source "$HOME/.cargo/env"`) so `jafgen` is on your PATH.
+
+## Usage
+
+From any directory, run:
 
 ```shell
-pip install jafgen
+jafgen
 ```
 
-## Use
+This will:
+1. Start a local web server
+2. Automatically open `http://localhost:3000` in your browser
+3. Present the configuration UI
 
-`jafgen` takes one argument:
+### Web UI
 
-- `[int]` Years to generate data for. The default is 1 year.
+The web interface lets you configure:
 
-The following options are available:
+- **Start Date / End Date** — the time range for the simulation
+- **Max Orders** — optionally cap the total number of orders generated
+- **File Prefix** — prefix for output CSV filenames (default: `raw`)
+- **Store Locations** — add, remove, and configure stores with:
+  - Name, city, and country
+  - Popularity, tax rate, and market size
+  - Opening day offset from the start date
 
-- `--days [int]` The number of days to generate data for. If both years and days are set, they will be added together.
+Click **Generate Data** and the CSVs will be written to a `jaffle-data/` folder in your current working directory.
 
-- `--pre` sets a prefix for the generated files in the format `[prefix]_[file_name].csv`. It defaults to `raw`.
+### International Stores
 
-Generate a simulation spanning 3 years from 2016-2019 with a prefix of `cool`:
+Stores can be assigned to any country. When stores span multiple countries, the stores CSV files are split by country with a suffix (e.g. `raw_stores_US.csv`, `raw_stores_GB.csv`).
+
+### Default Stores
+
+Six US locations are pre-loaded by default:
+
+| Store | Popularity | Tax Rate | Market Size |
+|-------|-----------|----------|-------------|
+| Philadelphia | 0.85 | 6% | 900 |
+| Brooklyn | 0.95 | 4% | 1,400 |
+| Chicago | 0.92 | 6.25% | 1,200 |
+| San Francisco | 0.87 | 7.5% | 1,100 |
+| New Orleans | 0.92 | 4% | 800 |
+| Los Angeles | 0.87 | 8% | 800 |
+
+## Output
+
+Generated CSV files are saved to `./jaffle-data/` in your current directory:
+
+| File | Description |
+|------|-------------|
+| `{prefix}_customers.csv` | Customer IDs and names |
+| `{prefix}_orders.csv` | Orders with timestamps, store, subtotal, tax, and total (in cents) |
+| `{prefix}_items.csv` | Order-to-SKU line items |
+| `{prefix}_products.csv` | Product catalog (SKU, name, type, price, description) |
+| `{prefix}_supplies.csv` | Supplies with cost, perishability, and linked SKUs |
+| `{prefix}_stores.csv` | Store details (name, open date, tax rate) |
+| `{prefix}_tweets.csv` | Customer tweets with sentiment |
+
+## How It Works
+
+Rather than using discrete rules to generate data, `jafgen` sets up entities with behavior patterns and lets them interact over simulated time. Customers have personas (Commuter, Remote Worker, Brunch Crowd, Student, Casuals, Health Nut) that determine when and what they buy. The simulation applies:
+
+- **Seasonality** — a cosine curve across the year
+- **Weekend effects** — reduced traffic on Saturdays and Sundays
+- **Growth trends** — ~20% year-over-year increase
+- **Market penetration** — new stores gradually ramp up their customer base
+
+Each run produces unique data. The simulation is not idempotent by design.
+
+## Development
 
 ```shell
-jafgen 3 --pre cool
+git clone https://github.com/dbt-labs/jaffle-shop-generator.git
+cd jaffle-shop-generator
+cargo build --release
+cargo run --release
 ```
 
-## Purpose
+The project structure:
 
-Finding a good data set to practice, learn, or teach analytics engineering with can be difficult. Most open datasets are great for machine learning -- they offer single wide tables that you can manipulate and analyze. Full, real relational databases on the other hand are generally protected by private companies. Not only that, but they're a bit _too_ real. To get to a state that a beginner or intermediate person can understand, there needs to be an advanced amount of analytics engineering transformation applied.
-
-To that end, this project generates relatively simple, clean (but importantly, not _perfect_) data for a variety of entities in discrete tables, which can be transformed and combined into analytical building blocks. There are even trends (like seasonality) and personas (like buying patterns) that can be sussed out through data modeling!
-
-## Approach
-
-The great [@drewbanin](https://github.com/drewbanin) watched the movie [Synecdoche, New York](https://en.wikipedia.org/wiki/Synecdoche,_New_York), and was inspired by the idea of creating a complete simulation of a world. Rather than using discrete rules to generate synthetic data, instead setting up entities with behavior patterns and letting them loose to interact with each other. This was the birth of the Jaffle Shop Generator. There are customers, stores, products, and more, all with their own behaviors and interactions as time passes. These combine to create unique and realistic datasets on every run.
-
-An important caveat is that `jafgen` is _not_ idempotent. By design, it generates new data every time you run it based on the simulation's interactions. This is intended behavior, as it allows for more realistic and interesting data generation. Certain aspects are hard coded, like stores opening at certain times, but the output data is always unique.
-
-We hope over time to add more complex behaviors and trends to the simulation!
-
-## Contribution
-
-We welcome contribution to the project! It's relatively simple to get started, just clone the repo, spin up a virtual environment, and install the dependencies:
-
-```shell
-gh repo clone dbt-labs/jaffle-shop-generator
-python3 -m venv .venv
-# Install the package requirements
-pip install -r requirements.txt
-# Install the dev tooling (ruff and pytest)
-pip install -r dev-requirements.txt
-# Install the package in editable mode
-pip install -e .
+```
+Cargo.toml          # Rust package manifest
+src/
+  main.rs           # Web server entry point (axum, port 3000)
+  models/           # Data models (items, stores, customers, orders, tweets, supplies)
+  simulation/       # Time, curves, market penetration, simulation orchestrator
+  web/              # HTTP handlers and API endpoints
+static/
+  index.html        # Web UI (embedded in binary at compile time)
+install.sh          # One-line install script
 ```
 
-Working out from the `jafgen` command, you can see the main entrypoint in `jaffle_shop_generator/cli.py`. This calls the simulation found in `jafgen/simulation.py`. The simulation is where most of the magic happens.
+### API Endpoints
 
-We recommend installing our githook scripts locally. To do that, install [Lefthook](https://github.com/evilmartians/lefthook) and run
-```
-lefthook install
-```
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/` | Web UI |
+| GET | `/api/defaults` | Default configuration (dates + stores) |
+| POST | `/api/generate` | Run simulation and write CSVs |

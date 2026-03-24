@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fs;
 use chrono::NaiveDate;
 use rand::rngs::StdRng;
-use rand::SeedableRng;
+use rand::{Rng, SeedableRng};
 use serde::{Deserialize, Serialize};
 
 use crate::models::customer::Customer;
@@ -84,17 +84,77 @@ pub fn run_simulation(config: &SimConfig) -> SimResult {
         }
     }
 
-    // If num_orders is specified, truncate or note
-    if let Some(target) = config.num_orders {
-        let target = target as usize;
+    // Determine target order count
+    let target_orders: usize = if let Some(explicit) = config.num_orders {
+        // User specified an exact cap — simple truncation
+        let target = explicit as usize;
         if all_orders.len() > target {
             all_orders.truncate(target);
-            // Keep tweets that match the time window of remaining orders
             if let Some(last_order) = all_orders.last() {
                 all_tweets.retain(|t| t.tweeted_at <= last_order.ordered_at);
             }
         }
-    }
+        all_orders.len()
+    } else {
+        // No cap specified: target 10,000–15,000 orders with ~3 orders/customer/year
+        let target = rng.gen_range(10_000usize..=15_000usize);
+        let years = (total_days as f64 / 365.25).max(1.0);
+
+        // Group orders by customer
+        let mut orders_by_customer: HashMap<String, Vec<Order>> = HashMap::new();
+        for order in all_orders.drain(..) {
+            orders_by_customer
+                .entry(order.customer_id.clone())
+                .or_default()
+                .push(order);
+        }
+
+        let available_customers = orders_by_customer.len();
+        // Ideal: 3 orders/customer/year → need target/(3*years) customers
+        let ideal_customers = ((target as f64) / (3.0 * years)).ceil() as usize;
+        // Use the smaller of ideal vs available
+        let selected_count = ideal_customers.min(available_customers).max(1);
+        // Recalculate per-customer avg to hit target with selected_count customers
+        let avg_per_customer = ((target as f64) / (selected_count as f64)).round().max(1.0) as usize;
+
+        // Shuffle customer IDs and pick selected_count of them
+        let mut customer_ids: Vec<String> = orders_by_customer.keys().cloned().collect();
+        fisher_yates_shuffle(&mut customer_ids, &mut rng);
+        customer_ids.truncate(selected_count);
+
+        // For each selected customer, keep a random number of orders centred
+        // on avg_per_customer (uniform between 1 and 2×avg, capped at actual).
+        let mut kept_orders: Vec<Order> = Vec::with_capacity(target);
+        for cid in &customer_ids {
+            if let Some(mut orders) = orders_by_customer.remove(cid) {
+                let upper = (2 * avg_per_customer).min(orders.len()).max(1);
+                let keep = rng.gen_range(1..=upper);
+                fisher_yates_shuffle(&mut orders, &mut rng);
+                orders.truncate(keep);
+                kept_orders.extend(orders);
+            }
+        }
+
+        // If we overshot the target, randomly trim
+        if kept_orders.len() > target {
+            fisher_yates_shuffle(&mut kept_orders, &mut rng);
+            kept_orders.truncate(target);
+        }
+
+        // Sort chronologically for clean output
+        kept_orders.sort_by_key(|o| o.ordered_at);
+        all_orders = kept_orders;
+
+        // Rebuild customer and tweet sets to match surviving orders
+        let active_ids: std::collections::HashSet<String> =
+            all_orders.iter().map(|o| o.customer_id.clone()).collect();
+        all_customers.retain(|k, _| active_ids.contains(k));
+        all_tweets.retain(|t| active_ids.contains(&t.user_id));
+
+        all_orders.len()
+    };
+
+    let _ = target_orders; // used for the branching above
 
     SimResult {
         orders: all_orders,
@@ -224,6 +284,13 @@ pub fn save_results(config: &SimConfig, result: &SimResult) -> Result<String, St
         .unwrap_or_else(|_| output_dir.to_string());
 
     Ok(abs_path)
+}
+
+fn fisher_yates_shuffle<T>(slice: &mut [T], rng: &mut impl Rng) {
+    for i in (1..slice.len()).rev() {
+        let j = rng.gen_range(0..=i);
+        slice.swap(i, j);
+    }
 }
 
 fn write_csv(path: &str, headers: &[&str], rows: Vec<Vec<String>>) -> Result<(), String> {
